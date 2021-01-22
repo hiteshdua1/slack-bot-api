@@ -7,6 +7,8 @@ var extend = require('extend');
 var WebSocket = require('ws');
 var EventEmitter = require('events').EventEmitter;
 var { setWsHeartbeat } = require('ws-heartbeat/client');
+var HttpsProxyAgent = require('https-proxy-agent');
+var url = require('url');
 
 class Bot extends EventEmitter {
     /**
@@ -19,8 +21,13 @@ class Bot extends EventEmitter {
          this.token = params.token;
          this.name = params.name;
          this.disconnect = params.disconnect;
+         this.proxy = process.env.http_proxy || 'http://127.0.0.1:8888';
 
+         console.log('using proxy server %j', this.proxy);
          console.assert(params.token, 'token must be defined');
+         // create an instance of the HttpsProxyAgent class with the proxy server information
+         this.options = url.parse(this.proxy);
+
          if (!this.disconnect) {
            this.login();
          }
@@ -51,7 +58,10 @@ class Bot extends EventEmitter {
      * Establish a WebSocket connection
      */
      connect() {
-         this.ws = new WebSocket(this.wsUrl);
+         const agent = new HttpsProxyAgent(this.options);
+
+        // finally, initiate the WebSocket connection
+         this.ws = new WebSocket(this.wsUrl, { agent: agent });
 
          setWsHeartbeat(this.ws, '{ "kind": "ping" }');
 
